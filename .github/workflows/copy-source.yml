@@ -1,0 +1,48 @@
+name: Copy source safely
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copy-source.yml
+
+permissions:
+  contents: write
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out destination
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Copy source without local secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/Matrix-ll/Timeless-Mark-Tattoo.git /tmp/source
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.env.local' \
+            --exclude='.github/' \
+            /tmp/source/ ./
+
+          if [[ -f /tmp/source/.env.local ]]; then
+            awk -F= '/^[A-Za-z_][A-Za-z0-9_]*=/{print $1"="}' /tmp/source/.env.local > .env.example
+          else
+            : > .env.example
+          fi
+
+          touch .gitignore
+          grep -qxF '.env.local' .gitignore || printf '\n.env.local\n' >> .gitignore
+          grep -qxF '.env.*.local' .gitignore || printf '.env.*.local\n' >> .gitignore
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'Copy Timeless Mark Tattoo source safely'
+            git push origin main
+          fi
