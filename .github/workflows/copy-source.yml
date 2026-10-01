@@ -2,9 +2,9 @@ name: Copy source safely
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     paths:
-      - .github/workflows/copy-source.yml
+      - copy-source.trigger
 
 permissions:
   contents: write
@@ -13,9 +13,10 @@ jobs:
   copy:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out destination
+      - name: Check out destination main branch
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - name: Copy source without local secrets
